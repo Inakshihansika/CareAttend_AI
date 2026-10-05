@@ -1,8 +1,10 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 
 from model import (
+    FEATURES,
     prepare_data,
     train_models,
     predict_patient,
@@ -17,267 +19,315 @@ st.set_page_config(
 )
 
 
-st.markdown(
-    """
-    <style>
+# =========================================================
+# CSS
+# =========================================================
 
-    .stApp {
-        background-color: #f4f7fb;
-    }
+st.markdown("""
+<style>
 
-    [data-testid="stSidebar"] {
-        background-color: #102a43;
-    }
+.stApp {
+    background-color: #f4f8fb;
+}
 
-    [data-testid="stSidebar"] * {
-        color: white;
-    }
+h1, h2, h3, h4, h5, h6 {
+    color: #12344d !important;
+}
 
-    .hero {
-        background: linear-gradient(
-            135deg,
-            #102a43,
-            #176b87
-        );
-        padding: 30px;
-        border-radius: 20px;
-        color: white;
-        margin-bottom: 25px;
-    }
+p, li {
+    color: #344b5e !important;
+}
 
-    .hero h1 {
-        font-size: 42px;
-        margin-bottom: 5px;
-    }
+.hero {
+    background: linear-gradient(
+        135deg,
+        #0d3553,
+        #176b83
+    );
+    padding: 35px;
+    border-radius: 20px;
+    margin-bottom: 25px;
+}
 
-    .hero p {
-        font-size: 17px;
-    }
+.hero h1 {
+    color: white !important;
+    font-size: 40px;
+    margin: 0;
+}
 
-    .card {
-        background-color: white;
-        padding: 22px;
-        border-radius: 18px;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.08);
-        margin-bottom: 15px;
-    }
+.hero p {
+    color: white !important;
+    font-size: 17px;
+    margin-top: 8px;
+}
 
-    .high {
-        background-color: #ffe5e5;
-        border-left: 7px solid #d62828;
-        padding: 25px;
-        border-radius: 15px;
-    }
+.card {
+    background-color: white;
+    padding: 25px;
+    border-radius: 18px;
+    border: 1px solid #dce7ee;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 18px rgba(0,0,0,0.06);
+}
 
-    .medium {
-        background-color: #fff3d6;
-        border-left: 7px solid #f4a261;
-        padding: 25px;
-        border-radius: 15px;
-    }
+.card h2,
+.card h3,
+.card h4 {
+    color: #12344d !important;
+}
 
-    .low {
-        background-color: #e4f7ed;
-        border-left: 7px solid #2a9d68;
-        padding: 25px;
-        border-radius: 15px;
-    }
+.card p,
+.card li {
+    color: #344b5e !important;
+}
 
-    .risk-number {
-        font-size: 45px;
-        font-weight: bold;
-    }
+.section-title {
+    color: #12344d !important;
+    font-size: 26px;
+    font-weight: bold;
+    margin-top: 20px;
+    margin-bottom: 15px;
+}
 
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+.developer {
+    background-color: white;
+    padding: 25px;
+    border-radius: 18px;
+    text-align: center;
+    border: 1px solid #dce7ee;
+    margin-top: 25px;
+}
 
+.developer h2 {
+    color: #12344d !important;
+}
+
+.developer p {
+    color: #176b83 !important;
+}
+
+.high-risk {
+    background-color: #ffe8e8;
+    border-left: 7px solid #d62828;
+    padding: 25px;
+    border-radius: 15px;
+}
+
+.high-risk h2 {
+    color: #b51f1f !important;
+}
+
+.high-risk p {
+    color: #7d2929 !important;
+}
+
+.medium-risk {
+    background-color: #fff4dc;
+    border-left: 7px solid #e39a16;
+    padding: 25px;
+    border-radius: 15px;
+}
+
+.medium-risk h2 {
+    color: #966000 !important;
+}
+
+.medium-risk p {
+    color: #76520f !important;
+}
+
+.low-risk {
+    background-color: #e6f7ed;
+    border-left: 7px solid #26965d;
+    padding: 25px;
+    border-radius: 15px;
+}
+
+.low-risk h2 {
+    color: #176c42 !important;
+}
+
+.low-risk p {
+    color: #285d43 !important;
+}
+
+.footer {
+    text-align: center;
+    padding: 30px;
+    margin-top: 40px;
+    color: #617587 !important;
+    border-top: 1px solid #dce7ee;
+}
+
+.footer strong {
+    color: #12344d !important;
+}
+
+[data-testid="stMetric"] {
+    background-color: white;
+    border-radius: 15px;
+    padding: 15px;
+    border: 1px solid #dce7ee;
+}
+
+[data-testid="stMetricLabel"] {
+    color: #617587 !important;
+}
+
+[data-testid="stMetricValue"] {
+    color: #12344d !important;
+}
+
+.stButton > button {
+    background-color: #176b83;
+    color: white !important;
+    border-radius: 10px;
+    font-weight: bold;
+    border: none;
+}
+
+.stButton > button:hover {
+    background-color: #0d5268;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+
+# =========================================================
+# LOAD DATA
+# =========================================================
 
 @st.cache_data
 def load_data():
+    return pd.read_csv("medical_appointments.csv")
 
-    data = pd.read_csv(
-        "medical_appointments.csv"
-    )
 
-    return prepare_data(data)
-
+# =========================================================
+# TRAIN MODELS
+# =========================================================
 
 @st.cache_resource
 def create_models():
 
-    data = load_data()
+    df = load_data()
 
-    return train_models(data)
+    return train_models(df)
 
 
 try:
 
-    df = load_data()
-
     (
-        processed_df,
+        data,
         trained_models,
         results,
         best_model_name,
         best_model
     ) = create_models()
 
-except FileNotFoundError:
-
-    st.error(
-        "medical_appointments.csv was not found."
-    )
-
-    st.info(
-        "Put medical_appointments.csv inside the same folder as app.py."
-    )
-
-    st.stop()
-
 except Exception as e:
 
-    st.error(
-        "An error occurred while loading the project."
-    )
+    st.error("There is an error while loading the model.")
 
-    st.exception(e)
+    st.code(str(e))
 
     st.stop()
 
 
-def age_group(age):
+# =========================================================
+# SIDEBAR
+# =========================================================
 
-    if age <= 12:
-        return "Child"
+with st.sidebar:
 
-    if age <= 25:
-        return "Young Adult"
+    st.markdown(
+        """
+        <div style="text-align:center;">
 
-    if age <= 45:
-        return "Adult"
+        <h1 style="color:white !important;">
+        🏥 CareAttend AI
+        </h1>
 
-    if age <= 60:
-        return "Middle Age"
+        <p style="color:white !important;">
+        Medical Appointment Intelligence
+        </p>
 
-    return "Senior"
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
+    st.markdown("---")
 
-def risk_reasons(patient):
+    page = st.radio(
+        "Navigation",
+        [
+            "🏠 Dashboard",
+            "👤 Patient Prediction",
+            "📂 Batch Prediction",
+            "📊 Analytics",
+            "🧠 Model Lab",
+            "🔎 Dataset Explorer",
+            "ℹ️ About"
+        ]
+    )
 
-    reasons = []
+    st.markdown("---")
 
-    if patient["WaitingDays"] > 14:
+    st.markdown(
+        f"""
+        <div style="
+        background:#176b83;
+        padding:15px;
+        border-radius:12px;
+        text-align:center;
+        ">
 
-        reasons.append(
-            "Long waiting period"
-        )
+        <p style="color:white !important;">
+        Best Model
+        </p>
 
-    if patient["SMS_received"] == 0:
+        <h4 style="color:white !important;">
+        {best_model_name}
+        </h4>
 
-        reasons.append(
-            "SMS reminder not received"
-        )
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    if patient["Age"] < 25:
+    st.markdown(
+        """
+        <br>
 
-        reasons.append(
-            "Younger age group"
-        )
+        <div style="
+        background:#12344d;
+        padding:15px;
+        border-radius:12px;
+        text-align:center;
+        ">
 
-    if patient["AppointmentWeekday"] >= 5:
+        <p style="color:#cde8f2 !important;">
+        Developed by
+        </p>
 
-        reasons.append(
-            "Weekend appointment"
-        )
+        <h4 style="color:white !important;">
+        Inakshi Hansika S S
+        </h4>
 
-    if patient["Scholarship"] == 1:
+        <p style="color:#cde8f2 !important;">
+        B.Sc. Data Science
+        </p>
 
-        reasons.append(
-            "Scholarship indicator present"
-        )
-
-    if len(reasons) == 0:
-
-        reasons.append(
-            "No major rule-based risk factors detected"
-        )
-
-    return reasons
-
-
-def recommendations(
-    patient,
-    risk_level
-):
-
-    actions = []
-
-    if patient["SMS_received"] == 0:
-
-        actions.append(
-            "Send an SMS reminder 24 hours before the appointment."
-        )
-
-    if patient["WaitingDays"] > 14:
-
-        actions.append(
-            "Send an additional appointment confirmation."
-        )
-
-    if risk_level == "HIGH":
-
-        actions.append(
-            "Consider a confirmation call."
-        )
-
-    elif risk_level == "MEDIUM":
-
-        actions.append(
-            "Send an additional reminder."
-        )
-
-    else:
-
-        actions.append(
-            "Continue the standard reminder process."
-        )
-
-    return actions
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 
-st.sidebar.markdown(
-    "# 🏥 CareAttend AI"
-)
-
-st.sidebar.write(
-    "Medical Appointment Intelligence"
-)
-
-st.sidebar.markdown("---")
-
-
-page = st.sidebar.radio(
-    "Choose Module",
-    [
-        "🏠 Dashboard",
-        "👤 Patient Prediction",
-        "📂 Batch Prediction",
-        "📊 Analytics",
-        "🧠 Model Lab",
-        "🔎 Dataset Explorer",
-        "ℹ️ About"
-    ]
-)
-
-
-st.sidebar.markdown("---")
-
-st.sidebar.success(
-    "Best Model: " + best_model_name
-)
-
+# =========================================================
+# DASHBOARD
+# =========================================================
 
 if page == "🏠 Dashboard":
 
@@ -288,11 +338,7 @@ if page == "🏠 Dashboard":
         <h1>🏥 CareAttend AI</h1>
 
         <p>
-        Smart Medical Appointment No-Show Prediction
-        </p>
-
-        <p>
-        Predict risk • Understand patterns • Take preventive action
+        Intelligent Medical Appointment No-Show Prediction
         </p>
 
         </div>
@@ -300,206 +346,150 @@ if page == "🏠 Dashboard":
         unsafe_allow_html=True
     )
 
-    total = len(processed_df)
+    total = len(data)
 
-    no_show_count = int(
-        processed_df["No-show"].sum()
+    no_show = int(
+        data["No-show"].sum()
     )
 
-    attended_count = (
-        total - no_show_count
-    )
+    attended = total - no_show
 
     no_show_rate = (
-        no_show_count / total * 100
-    )
-
-    c1, c2, c3, c4 = st.columns(4)
-
-    with c1:
-
-        st.metric(
-            "Total Appointments",
-            f"{total:,}"
-        )
-
-    with c2:
-
-        st.metric(
-            "Attended",
-            f"{attended_count:,}"
-        )
-
-    with c3:
-
-        st.metric(
-            "No-Shows",
-            f"{no_show_count:,}"
-        )
-
-    with c4:
-
-        st.metric(
-            "No-Show Rate",
-            f"{no_show_rate:.1f}%"
-        )
+        no_show / total
+    ) * 100
 
     st.markdown(
-        "## 📈 Appointment Overview"
+        """
+        <div class="section-title">
+        📌 Executive Overview
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    col1.metric(
+        "Total Appointments",
+        f"{total:,}"
+    )
+
+    col2.metric(
+        "Attended",
+        f"{attended:,}"
+    )
+
+    col3.metric(
+        "No-Shows",
+        f"{no_show:,}"
+    )
+
+    col4.metric(
+        "No-Show Rate",
+        f"{no_show_rate:.1f}%"
+    )
+
+    st.markdown(
+        """
+        <div class="section-title">
+        🎯 Project Objective
+        </div>
+
+        <div class="card">
+
+        <h3>
+        Predict • Prioritize • Prevent
+        </h3>
+
+        <p>
+        CareAttend AI predicts whether a patient is
+        likely to miss a scheduled medical appointment.
+        </p>
+
+        <p>
+        The system uses patient information,
+        appointment details, waiting time,
+        SMS reminders and health-related factors
+        to estimate appointment no-show risk.
+        </p>
+
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
     col1, col2 = st.columns(2)
 
     with col1:
 
-        counts = processed_df[
-            "No-show"
-        ].value_counts()
+        st.markdown(
+            """
+            <div class="card">
 
-        attended = counts.get(
-            0,
-            0
+            <h3>🧠 Machine Learning Models</h3>
+
+            <ul>
+            <li>Logistic Regression</li>
+            <li>Random Forest</li>
+            <li>Gradient Boosting</li>
+            </ul>
+
+            </div>
+            """,
+            unsafe_allow_html=True
         )
-
-        no_show = counts.get(
-            1,
-            0
-        )
-
-        fig, ax = plt.subplots(
-            figsize=(7, 4)
-        )
-
-        ax.bar(
-            ["Attended", "No-Show"],
-            [attended, no_show]
-        )
-
-        ax.set_ylabel(
-            "Appointments"
-        )
-
-        ax.set_title(
-            "Appointment Outcome"
-        )
-
-        st.pyplot(fig)
-
-        plt.close(fig)
 
     with col2:
 
-        age_data = processed_df.copy()
+        st.markdown(
+            """
+            <div class="card">
 
-        age_data["AgeGroup"] = age_data[
-            "Age"
-        ].apply(age_group)
+            <h3>📈 Evaluation Metrics</h3>
 
-        age_rate = (
-            age_data
-            .groupby("AgeGroup")["No-show"]
-            .mean()
-            * 100
+            <ul>
+            <li>Accuracy</li>
+            <li>Precision</li>
+            <li>Recall</li>
+            <li>F1 Score</li>
+            <li>Confusion Matrix</li>
+            </ul>
+
+            </div>
+            """,
+            unsafe_allow_html=True
         )
-
-        order = [
-            "Child",
-            "Young Adult",
-            "Adult",
-            "Middle Age",
-            "Senior"
-        ]
-
-        age_rate = age_rate.reindex(
-            order
-        ).dropna()
-
-        fig, ax = plt.subplots(
-            figsize=(7, 4)
-        )
-
-        ax.bar(
-            age_rate.index,
-            age_rate.values
-        )
-
-        ax.set_ylabel(
-            "No-Show Percentage"
-        )
-
-        ax.set_title(
-            "No-Show Rate by Age Group"
-        )
-
-        ax.tick_params(
-            axis="x",
-            rotation=25
-        )
-
-        st.pyplot(fig)
-
-        plt.close(fig)
 
     st.markdown(
-        "## ⭐ What makes this project different?"
+        """
+        <div class="section-title">
+        📊 Attendance Distribution
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-    a, b, c = st.columns(3)
+    fig, ax = plt.subplots()
 
-    with a:
+    ax.bar(
+        ["Attended", "No-Show"],
+        [attended, no_show]
+    )
 
-        st.markdown(
-            """
-            <div class="card">
+    ax.set_ylabel(
+        "Number of Appointments"
+    )
 
-            <h3>🎯 Risk Score</h3>
+    ax.set_title(
+        "Appointment Attendance"
+    )
 
-            <p>
-            Converts prediction probability into
-            an easy 0–100 risk score.
-            </p>
+    st.pyplot(fig)
 
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
 
-    with b:
-
-        st.markdown(
-            """
-            <div class="card">
-
-            <h3>🔍 Explainable Prediction</h3>
-
-            <p>
-            Shows factors associated with
-            the predicted risk.
-            </p>
-
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    with c:
-
-        st.markdown(
-            """
-            <div class="card">
-
-            <h3>📩 Smart Action</h3>
-
-            <p>
-            Suggests operational reminder
-            actions based on risk.
-            </p>
-
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
+# =========================================================
+# PATIENT PREDICTION
+# =========================================================
 
 elif page == "👤 Patient Prediction":
 
@@ -510,7 +500,8 @@ elif page == "👤 Patient Prediction":
         <h1>👤 Patient Risk Assessment</h1>
 
         <p>
-        Enter appointment details to estimate no-show risk.
+        Predict the probability of a patient missing
+        their appointment.
         </p>
 
         </div>
@@ -518,19 +509,24 @@ elif page == "👤 Patient Prediction":
         unsafe_allow_html=True
     )
 
-    left, right = st.columns(2)
+    st.markdown(
+        """
+        <div class="section-title">
+        🧑‍⚕️ Patient Information
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    with left:
+    col1, col2, col3 = st.columns(3)
 
-        st.subheader(
-            "👤 Patient Details"
-        )
+    with col1:
 
         age = st.number_input(
             "Age",
             min_value=0,
             max_value=120,
-            value=30
+            value=35
         )
 
         gender = st.selectbox(
@@ -548,76 +544,77 @@ elif page == "👤 Patient Prediction":
             ["No", "Yes"]
         )
 
+    with col2:
+
         diabetes = st.selectbox(
             "Diabetes",
             ["No", "Yes"]
         )
 
-    with right:
-
-        st.subheader(
-            "📅 Appointment Details"
-        )
-
         alcoholism = st.selectbox(
-            "Alcoholism Indicator",
+            "Alcoholism",
             ["No", "Yes"]
         )
 
         handicap = st.number_input(
-            "Handicap Level",
+            "Handicap",
             min_value=0,
             max_value=4,
             value=0
         )
 
-        sms = st.selectbox(
-            "SMS Reminder",
+        sms_received = st.selectbox(
+            "SMS Received",
             ["No", "Yes"]
         )
 
-        waiting_days = st.number_input(
-            "Waiting Days",
-            min_value=0,
-            max_value=365,
-            value=7
+    with col3:
+
+        scheduled_day = st.date_input(
+            "Scheduled Date"
         )
 
-        appointment_day = st.selectbox(
-            "Appointment Day",
-            [
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-                "Sunday"
-            ]
+        appointment_day = st.date_input(
+            "Appointment Date"
         )
 
-        appointment_month = st.selectbox(
-            "Appointment Month",
-            list(range(1, 13)),
-            index=0
+        waiting_days = max(
+            0,
+            (
+                pd.Timestamp(
+                    appointment_day
+                )
+                -
+                pd.Timestamp(
+                    scheduled_day
+                )
+            ).days
+        )
+
+        appointment_weekday = (
+            pd.Timestamp(
+                appointment_day
+            ).dayofweek
+        )
+
+        appointment_month = (
+            pd.Timestamp(
+                appointment_day
+            ).month
+        )
+
+        st.info(
+            f"Waiting Days: {waiting_days}"
         )
 
     st.markdown("")
 
-    if st.button(
-        "🚀 Predict Patient Risk",
+    predict = st.button(
+        "🔮 Predict Appointment Risk",
         use_container_width=True
-    ):
+    )
 
-        weekday_map = {
-            "Monday": 0,
-            "Tuesday": 1,
-            "Wednesday": 2,
-            "Thursday": 3,
-            "Friday": 4,
-            "Saturday": 5,
-            "Sunday": 6
-        }
+    if predict:
 
         patient = {
 
@@ -653,166 +650,154 @@ elif page == "👤 Patient Prediction":
 
             "SMS_received":
                 1
-                if sms == "Yes"
+                if sms_received == "Yes"
                 else 0,
 
             "WaitingDays":
                 waiting_days,
 
             "AppointmentWeekday":
-                weekday_map[
-                    appointment_day
-                ],
+                appointment_weekday,
 
             "AppointmentMonth":
                 appointment_month
         }
 
-        (
-            prediction,
-            probability,
-            risk_score,
-            risk_level
-        ) = predict_patient(
-            best_model,
-            patient
-        )
+        try:
 
-        st.markdown("---")
-
-        if risk_level == "HIGH":
-
-            st.markdown(
-                f"""
-                <div class="high">
-
-                <h2>🔴 HIGH RISK</h2>
-
-                <div class="risk-number">
-                {risk_score}/100
-                </div>
-
-                <p>
-                Predicted No-Show Probability:
-                <b>{probability:.1%}</b>
-                </p>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        elif risk_level == "MEDIUM":
-
-            st.markdown(
-                f"""
-                <div class="medium">
-
-                <h2>🟠 MEDIUM RISK</h2>
-
-                <div class="risk-number">
-                {risk_score}/100
-                </div>
-
-                <p>
-                Predicted No-Show Probability:
-                <b>{probability:.1%}</b>
-                </p>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        else:
-
-            st.markdown(
-                f"""
-                <div class="low">
-
-                <h2>🟢 LOW RISK</h2>
-
-                <div class="risk-number">
-                {risk_score}/100
-                </div>
-
-                <p>
-                Predicted No-Show Probability:
-                <b>{probability:.1%}</b>
-                </p>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        st.progress(
-            risk_score / 100
-        )
-
-        st.markdown(
-            "## 🔍 Risk Explanation"
-        )
-
-        reasons = risk_reasons(
-            patient
-        )
-
-        for reason in reasons:
-
-            st.write(
-                "• " + reason
-            )
-
-        st.markdown(
-            "## 📩 Recommended Action"
-        )
-
-        actions = recommendations(
-            patient,
-            risk_level
-        )
-
-        for action in actions:
-
-            st.success(
-                action
-            )
-
-        st.markdown(
-            "## 👤 Patient Summary"
-        )
-
-        s1, s2, s3, s4 = st.columns(4)
-
-        with s1:
-
-            st.metric(
-                "Age Group",
-                age_group(age)
-            )
-
-        with s2:
-
-            st.metric(
-                "Waiting Days",
-                waiting_days
-            )
-
-        with s3:
-
-            st.metric(
-                "SMS",
-                sms
-            )
-
-        with s4:
-
-            st.metric(
-                "Risk",
+            (
+                prediction,
+                probability,
+                risk_score,
                 risk_level
+            ) = predict_patient(
+                best_model,
+                patient
             )
 
+            st.markdown("---")
+
+            if risk_level == "HIGH":
+
+                st.markdown(
+                    f"""
+                    <div class="high-risk">
+
+                    <h2>
+                    🔴 HIGH RISK
+                    </h2>
+
+                    <p>
+                    Risk Score:
+                    <strong>
+                    {risk_score}/100
+                    </strong>
+                    </p>
+
+                    <p>
+                    This patient has a higher predicted
+                    probability of missing the appointment.
+                    </p>
+
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                st.warning(
+                    "Recommended Action: Send an additional "
+                    "SMS reminder or confirmation call."
+                )
+
+            elif risk_level == "MEDIUM":
+
+                st.markdown(
+                    f"""
+                    <div class="medium-risk">
+
+                    <h2>
+                    🟠 MEDIUM RISK
+                    </h2>
+
+                    <p>
+                    Risk Score:
+                    <strong>
+                    {risk_score}/100
+                    </strong>
+                    </p>
+
+                    <p>
+                    This patient has a moderate predicted
+                    no-show risk.
+                    </p>
+
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                st.info(
+                    "Recommended Action: Send a reminder "
+                    "before the appointment."
+                )
+
+            else:
+
+                st.markdown(
+                    f"""
+                    <div class="low-risk">
+
+                    <h2>
+                    🟢 LOW RISK
+                    </h2>
+
+                    <p>
+                    Risk Score:
+                    <strong>
+                    {risk_score}/100
+                    </strong>
+                    </p>
+
+                    <p>
+                    This patient has a lower predicted
+                    no-show risk.
+                    </p>
+
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                st.success(
+                    "Recommended Action: Normal appointment reminder."
+                )
+
+            col1, col2 = st.columns(2)
+
+            col1.metric(
+                "Risk Score",
+                f"{risk_score}/100"
+            )
+
+            col2.metric(
+                "Probability",
+                f"{probability * 100:.1f}%"
+            )
+
+        except Exception as e:
+
+            st.error(
+                "Prediction failed."
+            )
+
+            st.code(
+                str(e)
+            )
+
+
+# =========================================================
+# BATCH PREDICTION
+# =========================================================
 
 elif page == "📂 Batch Prediction":
 
@@ -823,7 +808,8 @@ elif page == "📂 Batch Prediction":
         <h1>📂 Batch Prediction</h1>
 
         <p>
-        Upload multiple appointment records and identify high-risk cases.
+        Upload multiple appointment records
+        and generate predictions.
         </p>
 
         </div>
@@ -831,12 +817,8 @@ elif page == "📂 Batch Prediction":
         unsafe_allow_html=True
     )
 
-    st.info(
-        "Upload a CSV with the same columns as medical_appointments.csv."
-    )
-
     uploaded_file = st.file_uploader(
-        "Choose CSV File",
+        "Upload CSV File",
         type=["csv"]
     )
 
@@ -844,180 +826,116 @@ elif page == "📂 Batch Prediction":
 
         try:
 
-            upload_df = pd.read_csv(
+            batch_data = pd.read_csv(
                 uploaded_file
             )
 
-            required = [
-                "Gender",
-                "ScheduledDay",
-                "AppointmentDay",
-                "Age",
-                "Scholarship",
-                "Hipertension",
-                "Diabetes",
-                "Alcoholism",
-                "Handcap",
-                "SMS_received"
-            ]
+            st.subheader(
+                "Uploaded Data"
+            )
 
-            missing = [
+            st.dataframe(
+                batch_data.head(10),
+                use_container_width=True
+            )
+
+            prepared = prepare_data(
+                batch_data
+            )
+
+            missing_columns = [
                 column
-                for column in required
-                if column not in upload_df.columns
+                for column in FEATURES
+                if column not in prepared.columns
             ]
 
-            if len(missing) > 0:
+            if missing_columns:
 
                 st.error(
-                    "Missing columns: "
-                    + ", ".join(missing)
+                    "Missing required columns:"
+                )
+
+                st.write(
+                    missing_columns
                 )
 
             else:
 
-                batch_df = prepare_data(
-                    upload_df
+                predictions = (
+                    best_model.predict(
+                        prepared[FEATURES]
+                    )
                 )
 
                 probabilities = (
                     best_model
                     .predict_proba(
-                        batch_df[
-                            [
-                                "Age",
-                                "Gender",
-                                "Scholarship",
-                                "Hipertension",
-                                "Diabetes",
-                                "Alcoholism",
-                                "Handcap",
-                                "SMS_received",
-                                "WaitingDays",
-                                "AppointmentWeekday",
-                                "AppointmentMonth"
-                            ]
-                        ]
+                        prepared[FEATURES]
                     )[:, 1]
                 )
 
-                predictions = (
-                    probabilities >= 0.5
-                ).astype(int)
+                result = batch_data.copy()
 
-                batch_df[
-                    "Risk Score"
-                ] = (
+                result["Prediction"] = np.where(
+                    predictions == 1,
+                    "No-Show",
+                    "Attend"
+                )
+
+                result["Risk Score"] = (
                     probabilities * 100
-                ).round().astype(int)
+                ).round(1)
 
-                batch_df[
-                    "Predicted No-Show"
-                ] = predictions
-
-                batch_df[
-                    "Risk Level"
-                ] = batch_df[
-                    "Risk Score"
-                ].apply(
-                    lambda x:
-                    "HIGH"
-                    if x >= 70
-                    else
-                    "MEDIUM"
-                    if x >= 40
-                    else
-                    "LOW"
+                result["Risk Level"] = pd.cut(
+                    probabilities * 100,
+                    bins=[
+                        -1,
+                        39.99,
+                        69.99,
+                        100
+                    ],
+                    labels=[
+                        "LOW",
+                        "MEDIUM",
+                        "HIGH"
+                    ]
                 )
 
-                high = int(
-                    (
-                        batch_df[
-                            "Risk Level"
-                        ] == "HIGH"
-                    ).sum()
+                st.success(
+                    "✅ Prediction completed successfully."
                 )
-
-                medium = int(
-                    (
-                        batch_df[
-                            "Risk Level"
-                        ] == "MEDIUM"
-                    ).sum()
-                )
-
-                low = int(
-                    (
-                        batch_df[
-                            "Risk Level"
-                        ] == "LOW"
-                    ).sum()
-                )
-
-                c1, c2, c3 = st.columns(3)
-
-                with c1:
-
-                    st.metric(
-                        "🔴 High Risk",
-                        high
-                    )
-
-                with c2:
-
-                    st.metric(
-                        "🟠 Medium Risk",
-                        medium
-                    )
-
-                with c3:
-
-                    st.metric(
-                        "🟢 Low Risk",
-                        low
-                    )
-
-                st.markdown(
-                    "## 📋 Prediction Results"
-                )
-
-                display_columns = [
-                    "Age",
-                    "Gender",
-                    "WaitingDays",
-                    "SMS_received",
-                    "Risk Score",
-                    "Risk Level",
-                    "Predicted No-Show"
-                ]
 
                 st.dataframe(
-                    batch_df[
-                        display_columns
-                    ],
+                    result,
                     use_container_width=True
                 )
 
-                result_csv = batch_df.to_csv(
+                csv = result.to_csv(
                     index=False
-                ).encode("utf-8")
+                )
 
                 st.download_button(
-                    "⬇️ Download Predictions",
-                    data=result_csv,
-                    file_name="careattend_predictions.csv",
-                    mime="text/csv",
+                    "⬇️ Download Results",
+                    csv,
+                    "careattend_predictions.csv",
+                    "text/csv",
                     use_container_width=True
                 )
 
         except Exception as e:
 
             st.error(
-                "Unable to process the uploaded file."
+                "Batch prediction failed."
             )
 
-            st.exception(e)
+            st.code(
+                str(e)
+            )
 
+
+# =========================================================
+# ANALYTICS
+# =========================================================
 
 elif page == "📊 Analytics":
 
@@ -1025,10 +943,10 @@ elif page == "📊 Analytics":
         """
         <div class="hero">
 
-        <h1>📊 Analytics Studio</h1>
+        <h1>📊 Appointment Analytics</h1>
 
         <p>
-        Explore patterns behind appointment attendance.
+        Explore appointment attendance patterns.
         </p>
 
         </div>
@@ -1036,46 +954,25 @@ elif page == "📊 Analytics":
         unsafe_allow_html=True
     )
 
-    analysis_df = processed_df.copy()
+    analysis_data = data.copy()
 
-    analysis_df["GenderName"] = (
-        analysis_df["Gender"]
-        .map({
-            0: "Female",
-            1: "Male"
-        })
-    )
+    col1, col2 = st.columns(2)
 
-    analysis_df["SMSName"] = (
-        analysis_df["SMS_received"]
-        .map({
-            0: "No",
-            1: "Yes"
-        })
-    )
+    with col1:
 
-    analysis_df["AgeGroup"] = (
-        analysis_df["Age"]
-        .apply(age_group)
-    )
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-
-        gender_filter = st.selectbox(
+        selected_gender = st.multiselect(
             "Gender",
-            [
-                "All",
+            ["Female", "Male"],
+            default=[
                 "Female",
                 "Male"
             ]
         )
 
-    with c2:
+    with col2:
 
         sms_filter = st.selectbox(
-            "SMS",
+            "SMS Received",
             [
                 "All",
                 "Yes",
@@ -1083,112 +980,98 @@ elif page == "📊 Analytics":
             ]
         )
 
-    with c3:
+    gender_display = (
+        analysis_data["Gender"]
+        .map({
+            0: "Female",
+            1: "Male"
+        })
+    )
 
-        age_filter = st.selectbox(
-            "Age Group",
-            [
-                "All",
-                "Child",
-                "Young Adult",
-                "Adult",
-                "Middle Age",
-                "Senior"
-            ]
+    analysis_data = analysis_data[
+        gender_display.isin(
+            selected_gender
         )
-
-    if gender_filter != "All":
-
-        analysis_df = analysis_df[
-            analysis_df["GenderName"]
-            == gender_filter
-        ]
+    ]
 
     if sms_filter != "All":
 
-        analysis_df = analysis_df[
-            analysis_df["SMSName"]
-            == sms_filter
+        sms_value = (
+            1
+            if sms_filter == "Yes"
+            else 0
+        )
+
+        analysis_data = analysis_data[
+            analysis_data["SMS_received"]
+            == sms_value
         ]
 
-    if age_filter != "All":
-
-        analysis_df = analysis_df[
-            analysis_df["AgeGroup"]
-            == age_filter
-        ]
-
-    st.write(
-        f"Showing {len(analysis_df):,} appointments"
+    st.metric(
+        "Filtered Appointments",
+        f"{len(analysis_data):,}"
     )
 
     col1, col2 = st.columns(2)
 
     with col1:
 
-        weekday_rate = (
-            analysis_df
-            .groupby(
-                "AppointmentWeekday"
-            )["No-show"]
+        gender_chart = (
+            analysis_data
+            .groupby("Gender")["No-show"]
             .mean()
-            * 100
+            .reset_index()
         )
 
-        weekday_names = [
-            "Mon",
-            "Tue",
-            "Wed",
-            "Thu",
-            "Fri",
-            "Sat",
-            "Sun"
-        ]
-
-        x_labels = [
-            weekday_names[int(x)]
-            for x in weekday_rate.index
-        ]
-
-        fig, ax = plt.subplots(
-            figsize=(7, 4)
+        gender_chart["Gender"] = (
+            gender_chart["Gender"]
+            .map({
+                0: "Female",
+                1: "Male"
+            })
         )
+
+        fig, ax = plt.subplots()
 
         ax.bar(
-            x_labels,
-            weekday_rate.values
+            gender_chart["Gender"],
+            gender_chart["No-show"] * 100
         )
 
         ax.set_title(
-            "No-Show Rate by Day"
+            "No-Show Rate by Gender"
         )
 
         ax.set_ylabel(
-            "No-Show %"
+            "No-Show Rate (%)"
         )
 
         st.pyplot(fig)
 
-        plt.close(fig)
-
     with col2:
 
-        sms_rate = (
-            analysis_df
+        sms_chart = (
+            analysis_data
             .groupby(
-                "SMSName"
+                "SMS_received"
             )["No-show"]
             .mean()
-            * 100
+            .reset_index()
         )
 
-        fig, ax = plt.subplots(
-            figsize=(7, 4)
+        sms_chart["SMS_received"] = (
+            sms_chart["SMS_received"]
+            .map({
+                0: "No SMS",
+                1: "SMS Received"
+            })
         )
+
+        fig, ax = plt.subplots()
 
         ax.bar(
-            sms_rate.index,
-            sms_rate.values
+            sms_chart["SMS_received"],
+            sms_chart["No-show"] * 100
         )
 
         ax.set_title(
@@ -1196,116 +1079,15 @@ elif page == "📊 Analytics":
         )
 
         ax.set_ylabel(
-            "No-Show %"
+            "No-Show Rate (%)"
         )
 
         st.pyplot(fig)
 
-        plt.close(fig)
 
-    col3, col4 = st.columns(2)
-
-    with col3:
-
-        waiting_df = analysis_df.copy()
-
-        waiting_df["WaitingGroup"] = pd.cut(
-            waiting_df["WaitingDays"],
-            bins=[
-                -1,
-                2,
-                7,
-                14,
-                30,
-                1000
-            ],
-            labels=[
-                "0-2 Days",
-                "3-7 Days",
-                "8-14 Days",
-                "15-30 Days",
-                "30+ Days"
-            ]
-        )
-
-        waiting_rate = (
-            waiting_df
-            .groupby(
-                "WaitingGroup",
-                observed=True
-            )["No-show"]
-            .mean()
-            * 100
-        )
-
-        fig, ax = plt.subplots(
-            figsize=(7, 4)
-        )
-
-        ax.bar(
-            waiting_rate.index.astype(str),
-            waiting_rate.values
-        )
-
-        ax.set_title(
-            "No-Show Rate by Waiting Period"
-        )
-
-        ax.set_ylabel(
-            "No-Show %"
-        )
-
-        st.pyplot(fig)
-
-        plt.close(fig)
-
-    with col4:
-
-        condition_names = [
-            "Hypertension",
-            "Diabetes",
-            "Alcoholism"
-        ]
-
-        condition_values = [
-            int(
-                analysis_df[
-                    "Hipertension"
-                ].sum()
-            ),
-            int(
-                analysis_df[
-                    "Diabetes"
-                ].sum()
-            ),
-            int(
-                analysis_df[
-                    "Alcoholism"
-                ].sum()
-            )
-        ]
-
-        fig, ax = plt.subplots(
-            figsize=(7, 4)
-        )
-
-        ax.bar(
-            condition_names,
-            condition_values
-        )
-
-        ax.set_title(
-            "Patient Health Indicators"
-        )
-
-        ax.set_ylabel(
-            "Number of Patients"
-        )
-
-        st.pyplot(fig)
-
-        plt.close(fig)
-
+# =========================================================
+# MODEL LAB
+# =========================================================
 
 elif page == "🧠 Model Lab":
 
@@ -1313,10 +1095,10 @@ elif page == "🧠 Model Lab":
         """
         <div class="hero">
 
-        <h1>🧠 Model Laboratory</h1>
+        <h1>🧠 Model Lab</h1>
 
         <p>
-        Compare machine learning models and understand performance.
+        Compare machine learning model performance.
         </p>
 
         </div>
@@ -1324,96 +1106,124 @@ elif page == "🧠 Model Lab":
         unsafe_allow_html=True
     )
 
-    model_names = list(
-        results.keys()
+    rows = []
+
+    for model_name, metrics in results.items():
+
+        rows.append(
+            {
+                "Model": model_name,
+                "Accuracy": metrics["Accuracy"],
+                "Precision": metrics["Precision"],
+                "Recall": metrics["Recall"],
+                "F1 Score": metrics["F1 Score"]
+            }
+        )
+
+    model_df = pd.DataFrame(
+        rows
     )
 
-    comparison = []
+    display_df = model_df.copy()
 
-    for name in model_names:
+    for column in [
+        "Accuracy",
+        "Precision",
+        "Recall",
+        "F1 Score"
+    ]:
 
-        comparison.append({
+        display_df[column] = (
+            display_df[column] * 100
+        ).round(2)
 
-            "Model": name,
-
-            "Accuracy":
-                results[name]["Accuracy"],
-
-            "Precision":
-                results[name]["Precision"],
-
-            "Recall":
-                results[name]["Recall"],
-
-            "F1 Score":
-                results[name]["F1 Score"]
-        })
-
-    comparison_df = pd.DataFrame(
-        comparison
+    st.subheader(
+        "📊 Model Performance"
     )
 
     st.dataframe(
-        comparison_df,
+        display_df,
         use_container_width=True
     )
 
     st.success(
-        "🏆 Best Model: "
-        + best_model_name
+        f"⭐ Best Model: {best_model_name}"
     )
 
-    best = results[
-        best_model_name
-    ]
-
-    c1, c2, c3, c4 = st.columns(4)
-
-    with c1:
-
-        st.metric(
-            "Accuracy",
-            f"{best['Accuracy']:.2%}"
-        )
-
-    with c2:
-
-        st.metric(
-            "Precision",
-            f"{best['Precision']:.2%}"
-        )
-
-    with c3:
-
-        st.metric(
-            "Recall",
-            f"{best['Recall']:.2%}"
-        )
-
-    with c4:
-
-        st.metric(
-            "F1 Score",
-            f"{best['F1 Score']:.2%}"
-        )
-
-    st.markdown(
-        "## 🔲 Confusion Matrix"
+    st.subheader(
+        "📈 Model Comparison"
     )
 
-    cm = best[
-        "Confusion Matrix"
-    ]
+    fig, ax = plt.subplots()
 
-    fig, ax = plt.subplots(
-        figsize=(6, 5)
+    x = np.arange(
+        len(model_df)
     )
 
-    ax.imshow(cm)
+    width = 0.18
 
-    ax.set_title(
-        best_model_name
-        + " Confusion Matrix"
+    ax.bar(
+        x - 1.5 * width,
+        model_df["Accuracy"],
+        width,
+        label="Accuracy"
+    )
+
+    ax.bar(
+        x - 0.5 * width,
+        model_df["Precision"],
+        width,
+        label="Precision"
+    )
+
+    ax.bar(
+        x + 0.5 * width,
+        model_df["Recall"],
+        width,
+        label="Recall"
+    )
+
+    ax.bar(
+        x + 1.5 * width,
+        model_df["F1 Score"],
+        width,
+        label="F1 Score"
+    )
+
+    ax.set_xticks(
+        x
+    )
+
+    ax.set_xticklabels(
+        model_df["Model"]
+    )
+
+    ax.set_ylim(
+        0,
+        1
+    )
+
+    ax.legend()
+
+    st.pyplot(fig)
+
+    st.subheader(
+        "🎯 Confusion Matrix"
+    )
+
+    selected_model = st.selectbox(
+        "Select Model",
+        list(results.keys())
+    )
+
+    matrix = results[
+        selected_model
+    ]["Confusion Matrix"]
+
+    fig, ax = plt.subplots()
+
+    ax.imshow(
+        matrix
     )
 
     ax.set_xlabel(
@@ -1424,18 +1234,27 @@ elif page == "🧠 Model Lab":
         "Actual"
     )
 
-    ax.set_xticks([0, 1])
-    ax.set_yticks([0, 1])
+    ax.set_xticks(
+        [0, 1]
+    )
 
-    ax.set_xticklabels([
-        "Attended",
-        "No-Show"
-    ])
+    ax.set_yticks(
+        [0, 1]
+    )
 
-    ax.set_yticklabels([
-        "Attended",
-        "No-Show"
-    ])
+    ax.set_xticklabels(
+        [
+            "Attend",
+            "No-Show"
+        ]
+    )
+
+    ax.set_yticklabels(
+        [
+            "Attend",
+            "No-Show"
+        ]
+    )
 
     for i in range(2):
 
@@ -1444,42 +1263,34 @@ elif page == "🧠 Model Lab":
             ax.text(
                 j,
                 i,
-                str(cm[i, j]),
+                str(
+                    matrix[i, j]
+                ),
                 ha="center",
                 va="center"
             )
 
     st.pyplot(fig)
 
-    plt.close(fig)
-
-    st.markdown(
-        "## 🔍 Feature Importance"
+    st.subheader(
+        "⭐ Feature Importance"
     )
 
-    importance_df = get_feature_importance(
-        best_model
+    importance = get_feature_importance(
+        trained_models[
+            selected_model
+        ]
     )
 
-    fig, ax = plt.subplots(
-        figsize=(9, 5)
+    st.dataframe(
+        importance,
+        use_container_width=True
     )
 
-    ax.barh(
-        importance_df["Feature"],
-        importance_df["Importance"]
-    )
 
-    ax.invert_yaxis()
-
-    ax.set_title(
-        "Important Model Features"
-    )
-
-    st.pyplot(fig)
-
-    plt.close(fig)
-
+# =========================================================
+# DATASET EXPLORER
+# =========================================================
 
 elif page == "🔎 Dataset Explorer":
 
@@ -1490,7 +1301,7 @@ elif page == "🔎 Dataset Explorer":
         <h1>🔎 Dataset Explorer</h1>
 
         <p>
-        Explore the appointment dataset used by CareAttend AI.
+        Explore the medical appointment dataset.
         </p>
 
         </div>
@@ -1498,75 +1309,80 @@ elif page == "🔎 Dataset Explorer":
         unsafe_allow_html=True
     )
 
-    c1, c2, c3, c4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
 
-    with c1:
+    col1.metric(
+        "Rows",
+        f"{len(data):,}"
+    )
 
-        st.metric(
-            "Rows",
-            f"{len(processed_df):,}"
+    col2.metric(
+        "Columns",
+        len(data.columns)
+    )
+
+    col3.metric(
+        "Missing Values",
+        int(
+            data.isna()
+            .sum()
+            .sum()
         )
+    )
 
-    with c2:
-
-        st.metric(
-            "Columns",
-            processed_df.shape[1]
-        )
-
-    with c3:
-
-        st.metric(
-            "Missing Values",
-            int(
-                processed_df
-                .isnull()
-                .sum()
-                .sum()
-            )
-        )
-
-    with c4:
-
-        st.metric(
-            "Duplicate Rows",
-            int(
-                processed_df
-                .duplicated()
-                .sum()
-            )
-        )
-
-    st.markdown(
-        "## 📋 Dataset"
+    st.subheader(
+        "📋 Dataset Preview"
     )
 
     st.dataframe(
-        processed_df,
+        data,
         use_container_width=True,
         height=450
     )
 
-    st.markdown(
-        "## 📊 Statistical Summary"
+    information = pd.DataFrame(
+        {
+            "Column": data.columns,
+
+            "Data Type": [
+                str(
+                    data[column].dtype
+                )
+                for column in data.columns
+            ],
+
+            "Missing Values": [
+                int(
+                    data[column]
+                    .isna()
+                    .sum()
+                )
+                for column in data.columns
+            ],
+
+            "Unique Values": [
+                int(
+                    data[column]
+                    .nunique()
+                )
+                for column in data.columns
+            ]
+        }
+    )
+
+    st.subheader(
+        "📌 Dataset Information"
     )
 
     st.dataframe(
-        processed_df.describe(),
+        information,
         use_container_width=True
     )
 
-    csv = processed_df.to_csv(
-        index=False
-    ).encode("utf-8")
 
-    st.download_button(
-        "⬇️ Download Processed Dataset",
-        data=csv,
-        file_name="processed_medical_appointments.csv",
-        mime="text/csv"
-    )
-
+# =========================================================
+# ABOUT
+# =========================================================
 
 elif page == "ℹ️ About":
 
@@ -1577,7 +1393,8 @@ elif page == "ℹ️ About":
         <h1>ℹ️ About CareAttend AI</h1>
 
         <p>
-        End-to-end machine learning project for medical appointment attendance prediction.
+        Machine Learning Based Medical Appointment
+        No-Show Prediction System
         </p>
 
         </div>
@@ -1589,14 +1406,32 @@ elif page == "ℹ️ About":
         """
         <div class="card">
 
-        <h2>🎯 Project Objective</h2>
+        <h2>
+        🎯 Project Objective
+        </h2>
 
         <p>
-        CareAttend AI predicts the probability of a patient missing
+        CareAttend AI is a machine learning application
+        designed to predict whether a patient may miss
         a scheduled medical appointment.
         </p>
 
-        <h3>🤖 Machine Learning Models</h3>
+        <h2>
+        🧠 Technologies Used
+        </h2>
+
+        <ul>
+        <li>Python</li>
+        <li>Pandas</li>
+        <li>NumPy</li>
+        <li>Scikit-learn</li>
+        <li>Matplotlib</li>
+        <li>Streamlit</li>
+        </ul>
+
+        <h2>
+        🤖 Machine Learning Models
+        </h2>
 
         <ul>
         <li>Logistic Regression</li>
@@ -1604,42 +1439,43 @@ elif page == "ℹ️ About":
         <li>Gradient Boosting</li>
         </ul>
 
-        <h3>📊 Evaluation Metrics</h3>
+        <h2>
+        🚀 Main Features
+        </h2>
 
         <ul>
-        <li>Accuracy</li>
-        <li>Precision</li>
-        <li>Recall</li>
-        <li>F1 Score</li>
-        <li>Confusion Matrix</li>
+        <li>Patient risk prediction</li>
+        <li>0–100 risk score</li>
+        <li>Low / Medium / High risk classification</li>
+        <li>Batch CSV prediction</li>
+        <li>Interactive analytics</li>
+        <li>Model comparison</li>
+        <li>Dataset exploration</li>
         </ul>
 
-        <h3>⭐ Unique Features</h3>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-        <ul>
-        <li>Patient Risk Score from 0 to 100</li>
-        <li>Low, Medium and High Risk Categories</li>
-        <li>Risk Explanation</li>
-        <li>Smart Reminder Recommendations</li>
-        <li>Batch Prediction</li>
-        <li>Downloadable Predictions</li>
-        <li>Analytics Dashboard</li>
-        <li>Model Comparison</li>
-        <li>Feature Importance</li>
-        </ul>
+    st.markdown(
+        """
+        <div class="developer">
 
-        <h3>👩‍💻 Developer</h3>
+        <div style="font-size:45px;">
+        👩‍💻
+        </div>
+
+        <h2>
+        Inakshi Hansika S S
+        </h2>
 
         <p>
-        Inakshi Hansika S S<br>
-        B.Sc. Data Science<br>
-        PSGR Krishnammal College for Women
+        B.Sc. Data Science
         </p>
 
-        <h3>🛠 Technology</h3>
-
         <p>
-        Python | Pandas | NumPy | Scikit-learn | Matplotlib | Streamlit
+        Developer & Data Science Project Creator
         </p>
 
         </div>
@@ -1647,7 +1483,51 @@ elif page == "ℹ️ About":
         unsafe_allow_html=True
     )
 
-    st.warning(
-        "This is an educational machine learning prototype and "
-        "not a clinical decision-making system."
+    st.markdown(
+        """
+        <div class="card">
+
+        <h3>
+        ⚠️ Disclaimer
+        </h3>
+
+        <p>
+        This project is developed for educational
+        and demonstration purposes. The predictions
+        are not clinically validated and should not
+        replace professional medical judgement.
+        </p>
+
+        </div>
+        """,
+        unsafe_allow_html=True
     )
+
+
+# =========================================================
+# FOOTER
+# =========================================================
+
+st.markdown(
+    """
+    <div class="footer">
+
+    🏥 <strong>CareAttend AI</strong>
+
+    <br>
+
+    Medical Appointment No-Show Prediction
+
+    <br><br>
+
+    Developed by
+    <strong>
+    Inakshi Hansika S S
+    </strong>
+
+    • B.Sc. Data Science
+
+    </div>
+    """,
+    unsafe_allow_html=True
+)
